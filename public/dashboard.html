@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="/auth.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e; color: #eee;
+            padding: 40px; min-height: 100vh;
+        }
+        .container {
+            max-width: 800px; margin: 0 auto;
+            background: #16213e; padding: 40px;
+            border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 30px; border-bottom: 2px solid #0f3460;
+            padding-bottom: 20px;
+        }
+        h1 { color: #16c79a; }
+        .btn {
+            padding: 10px 20px; background: #e94560; color: white;
+            border: none; border-radius: 5px; cursor: pointer;
+        }
+        .status {
+            display: inline-block; width: 10px; height: 10px;
+            background: #16c79a; border-radius: 50%;
+            margin-right: 10px; animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .info-box {
+            background: #0f3460; padding: 20px;
+            border-radius: 10px; margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><span class="status"></span>User Dashboard</h1>
+            <button class="btn" onclick="authManager.logout()">Logout</button>
+        </header>
+        
+        <p>Welcome! You are successfully authenticated.</p>
+        
+        <div class="info-box">
+            <h3>🔒 Session Active</h3>
+            <p>Your session will expire after 30 minutes of inactivity.</p>
+            <p>You will receive a warning 25 minute before expiration.</p>
+        </div>
+    </div>
+</body>
+</html>

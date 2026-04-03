@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <script src="/auth.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-box {
+            background: #16213e;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .logo {
+            font-size: 60px; margin-bottom: 20px;
+        }
+        h2 { color: #e94560; margin-bottom: 10px; }
+        p.subtitle { color: #888; margin-bottom: 30px; }
+        input {
+            width: 100%; padding: 15px; margin-bottom: 20px;
+            border: 2px solid #0f3460; border-radius: 8px;
+            background: #1a1a2e; color: white; font-size: 16px;
+        }
+        input:focus { outline: none; border-color: #e94560; }
+        button {
+            width: 100%; padding: 15px;
+            background: #e94560; color: white; border: none;
+            border-radius: 8px; font-size: 16px; cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover { background: #ff6b6b; transform: translateY(-2px); }
+        .error {
+            color: #e94560; margin-top: 15px; padding: 10px;
+            background: rgba(233, 69, 96, 0.1); border-radius: 5px;
+            display: none;
+        }
+        .error.show { display: block; }
+        .reason {
+            background: #0f3460; color: #16c79a; padding: 15px;
+            border-radius: 8px; margin-bottom: 20px; display: none;
+        }
+        .reason.show { display: block; }
+        .hint {
+            margin-top: 20px; color: #666; font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="logo">🔐</div>
+        <h2>Secure Access</h2>
+        <p class="subtitle">Password-only authentication</p>
+        
+        <div id="logoutReason" class="reason"></div>
+        
+        <form id="loginForm">
+            <input 
+                type="password" 
+                id="password" 
+                placeholder="Enter password" 
+                required
+                autocomplete="off"
+                autofocus
+            >
+            <button type="submit">Login</button>
+        </form>
+        
+        <div id="error" class="error"></div>
+        
+        <!-- <p class="hint">Default admin: admin123</p> -->
+    </div>
+
+    <script>
+        // Show logout reason if redirected
+        const reason = sessionStorage.getItem('logoutReason');
+        if (reason) {
+            document.getElementById('logoutReason').textContent = reason;
+            document.getElementById('logoutReason').classList.add('show');
+            sessionStorage.removeItem('logoutReason');
+        }
+        
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error');
+            
+            const result = await authManager.login(password);
+            
+            if (result.success) {
+                // Redirect handled by auth.js, but we can force it here too
+                window.location.href = result.isAdmin ? '/admin.html' : '/dashboard.html';
+            } else {
+                errorDiv.textContent = result.error;
+                errorDiv.classList.add('show');
+            }
+        });
+    </script>
+</body>
+</html>

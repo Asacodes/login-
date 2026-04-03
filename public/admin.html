@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <script src="/auth.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 30px; padding-bottom: 20px;
+            border-bottom: 2px solid #16213e;
+        }
+        h1 { color: #e94560; }
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 5px;
+            cursor: pointer; font-size: 14px; transition: all 0.3s;
+        }
+        .btn-danger { background: #e94560; color: white; }
+        .btn-primary { background: #0f3460; color: white; }
+        .btn-success { background: #16c79a; color: white; }
+        .btn:hover { opacity: 0.8; transform: translateY(-2px); }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: #16213e; padding: 20px; border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .card h2 {
+            color: #e94560; margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+        
+        .password-list {
+            list-style: none; max-height: 300px; overflow-y: auto;
+        }
+        .password-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px; background: #0f3460; margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .password-preview { font-family: monospace; color: #16c79a; }
+        
+        input {
+            width: 100%; padding: 12px; margin-bottom: 10px;
+            border: 2px solid #0f3460; border-radius: 5px;
+            background: #1a1a2e; color: white;
+        }
+        input:focus { outline: none; border-color: #e94560; }
+        
+        .session-list {
+            font-size: 0.9em;
+        }
+        .session-item {
+            padding: 10px; background: #0f3460; margin-bottom: 10px;
+            border-radius: 5px; border-left: 3px solid #16c79a;
+        }
+        .session-admin { border-left-color: #e94560; }
+        
+        .alert {
+            padding: 15px; border-radius: 5px; margin-bottom: 20px;
+            display: none;
+        }
+        .alert.show { display: block; }
+        .alert-success { background: #16c79a; color: white; }
+        .alert-error { background: #e94560; color: white; }
+        
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Admin Panel</h1>
+            <div>
+                <button class="btn btn-primary" onclick="showChangeAdminPassword()">Change Admin Password</button>
+                <button class="btn btn-danger" onclick="authManager.logout()">Logout</button>
+            </div>
+        </header>
+
+        <div id="alert" class="alert"></div>
+
+        <div class="grid">
+            <!-- User Passwords Management -->
+            <div class="card">
+                <h2>👥 User Passwords</h2>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="newPassword" placeholder="New user password" style="flex: 1;">
+                    <button class="btn btn-success" onclick="addPassword()">Add</button>
+                </div>
+                <ul id="passwordList" class="password-list">
+                    <li>Loading...</li>
+                </ul>
+            </div>
+
+            <!-- Active Sessions -->
+            <div class="card">
+                <h2>🌐 Active Sessions</h2>
+                <button class="btn btn-primary" onclick="loadSessions()" style="margin-bottom: 15px;">Refresh</button>
+                <div id="sessionList" class="session-list">
+                    <p>Click refresh to load sessions</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Admin Password Modal -->
+        <div id="adminPassModal" style="
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;
+        ">
+            <div style="background: #16213e; padding: 30px; border-radius: 10px; width: 90%; max-width: 400px;">
+                <h3 style="color: #e94560; margin-bottom: 20px;">Change Admin Password</h3>
+                <input type="password" id="currentAdminPass" placeholder="Current password">
+                <input type="password" id="newAdminPass" placeholder="New password (min 6 chars)">
+                <input type="password" id="confirmAdminPass" placeholder="Confirm new password">
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn btn-success" onclick="changeAdminPassword()" style="flex: 1;">Update</button>
+                    <button class="btn btn-danger" onclick="hideChangeAdminPassword()" style="flex: 1;">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load passwords on page load
+        loadPasswords();
+        loadSessions();
+
+        function showAlert(message, type = 'success') {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert alert-${type} show`;
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+
+        async function loadPasswords() {
+            try {
+                const response = await authManager.apiCall('/admin/passwords');
+                const data = await response.json();
+                
+                const list = document.getElementById('passwordList');
+                if (data.users.length === 0) {
+                    list.innerHTML = '<li style="color: #888;">No user passwords</li>';
+                    return;
+                }
+                
+                list.innerHTML = data.users.map((user, index) => `
+                    <li class="password-item">
+                        <span class="password-preview">${user.preview}</span>
+                        <button class="btn btn-danger" onclick="deletePassword(${user.id})">Delete</button>
+                    </li>
+                `).join('');
+            } catch (e) {
+                showAlert('Failed to load passwords', 'error');
+            }
+        }
+
+        async function addPassword() {
+            const input = document.getElementById('newPassword');
+            const password = input.value.trim();
+            
+            if (!password || password.length < 4) {
+                showAlert('Password must be at least 4 characters', 'error');
+                return;
+            }
+            
+            try {
+                const response = await authManager.apiCall('/admin/passwords', {
+                    method: 'POST',
+                    body: JSON.stringify({ password })
+                });
+                
+                if (response.ok) {
+                    showAlert('Password added successfully');
+                    input.value = '';
+                    loadPasswords();
+                } else {
+                    const data = await response.json();
+                    showAlert(data.error || 'Failed to add password', 'error');
+                }
+            } catch (e) {
+                showAlert('Network error', 'error');
+            }
+        }
+
+        async function deletePassword(id) {
+            if (!confirm('Are you sure you want to delete this password?')) return;
+            
+            try {
+                const response = await authManager.apiCall(`/admin/passwords/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showAlert('Password deleted');
+                    loadPasswords();
+                } else {
+                    showAlert('Failed to delete password', 'error');
+                }
+            } catch (e) {
+                showAlert('Network error', 'error');
+            }
+        }
+
+        async function loadSessions() {
+            try {
+                const response = await authManager.apiCall('/admin/sessions');
+                const data = await response.json();
+                
+                const list = document.getElementById('sessionList');
+                if (data.sessions.length === 0) {
+                    list.innerHTML = '<p style="color: #888;">No active sessions</p>';
+                    return;
+                }
+                
+                list.innerHTML = data.sessions.map(s => `
+                    <div class="session-item ${s.isAdmin ? 'session-admin' : ''}">
+                        <strong>${s.isAdmin ? '👑 Admin' : '👤 User'}</strong> | 
+                        IP: ${s.ip} | 
+                        Remaining: ${Math.ceil(s.timeRemaining / 1000)}s
+                        <br><small style="color: #888;">${s.lastActivity}</small>
+                    </div>
+                `).join('');
+            } catch (e) {
+                showAlert('Failed to load sessions', 'error');
+            }
+        }
+
+        function showChangeAdminPassword() {
+            document.getElementById('adminPassModal').style.display = 'flex';
+        }
+
+        function hideChangeAdminPassword() {
+            document.getElementById('adminPassModal').style.display = 'none';
+        }
+
+        async function changeAdminPassword() {
+            const current = document.getElementById('currentAdminPass').value;
+            const newPass = document.getElementById('newAdminPass').value;
+            const confirm = document.getElementById('confirmAdminPass').value;
+            
+            if (newPass !== confirm) {
+                showAlert('New passwords do not match', 'error');
+                return;
+            }
+            
+            if (newPass.length < 6) {
+                showAlert('Password must be at least 6 characters', 'error');
+                return;
+            }
+            
+            try {
+                const response = await authManager.apiCall('/admin/password', {
+                    method: 'PUT',
+                    body: JSON.stringify({ currentPassword: current, newPassword: newPass })
+                });
+                
+                if (response.ok) {
+                    showAlert('Admin password updated! Please login again.');
+                    setTimeout(() => authManager.logout(), 2000);
+                } else {
+                    const data = await response.json();
+                    showAlert(data.error || 'Failed to update password', 'error');
+                }
+            } catch (e) {
+                showAlert('Network error', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
